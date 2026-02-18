@@ -2,12 +2,14 @@ import { promisify } from 'node:util';
 import { pipeline } from 'node:stream';
 import aws4 from 'aws4';
 import { createServer } from 'http';
+import { defaultProvider } from "@aws-sdk/credential-provider-node";
 import { config } from 'dotenv';
 import { log } from 'node:console';
 config(); // Load environment variables
 
 const streamPipeline = promisify(pipeline);
 const awsHost = process.env.AWS_HOST || 'runtime-medical-imaging.us-east-1.amazonaws.com';
+const credentials = await defaultProvider()();
 const awsProtocol = process.env.AWS_PROTOCOL || 'https';
 
 const headers = {
@@ -23,9 +25,13 @@ const awsCredentials = {
 };
 
 const proxy = createServer(async (req, res) => {
+
+	console.log("\n==============================");
+	console.log("Incoming Request:", req.method, req.url);
+	console.log("==============================\n");
+
 	// Health check endpoint
 	if (req.url === '/health') {
-		console.log("process.env", process.env.AWS_ACCESS_KEY_ID, process.env.AWS_SECRET_ACCESS_KEY);
 		
 		res.writeHead(200, { 'Content-Type': 'application/json' });
 		return res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
@@ -72,7 +78,15 @@ const proxy = createServer(async (req, res) => {
 				body: body || null,
 			};
 
-			aws4.sign(newReq, awsCredentials);
+			console.log("AWS Credentials Fetched:");
+			console.log({credentials})
+			console.log("Forwarding To:", uri);
+
+			aws4.sign(newReq, {
+				accessKeyId: credentials.accessKeyId,
+				secretAccessKey: credentials.secretAccessKey,
+				sessionToken: credentials.sessionToken
+			});
 			const proxyRes = await fetch(uri, newReq);
 
 			console.log("proxyRes", proxyRes.body);
@@ -90,7 +104,7 @@ const proxy = createServer(async (req, res) => {
 	});
 });
 
-const port = 8089;
+const port = 8080;
 proxy.listen(port, () => {
 	console.log(`Healthlake proxy server is running on http://localhost:${port}`);
 });
