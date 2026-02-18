@@ -1,0 +1,17 @@
+{
+  "name": "awsproxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws4": "^1.13.2",
+    "dotenv": "^16.4.7"
+  },
+  "type": "module"
+}
